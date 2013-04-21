@@ -1,0 +1,1 @@
+[21-Apr-2013 02:29:37 America/North_Dakota/Center] PHP Warning:  fwrite() expects parameter 2 to be string, array given in C:\inetpub\wwwroot\VanRossum\make_play_search.php on line 56
