@@ -1,0 +1,92 @@
+body{
+	background-color: #DDD;
+}
+
+textarea, input, select{
+	font-family: "Courier New", Courier, monospace
+}
+
+body{
+	font-family: helvetica, sans-serif;
+}
+
+textarea[name="words"]{
+	width: 500px;
+	height: 300px;
+}
+
+.solver_textarea{
+	width: 300px !important;
+	height: 300px;
+}
+
+.label{
+	display: block;
+	width: 200px;
+}
+
+.table_letter{
+	display: inline-block;
+	width: 20px;
+	text-align: center;
+}
+
+.border{
+	border: 1px solid black;
+}
+
+.center{
+	width: 900px;
+	position: relative;
+	margin: 0px auto;
+	background-color: white;
+	box-shadow: 0px 0px 5px #888888;
+}
+
+.pad10{
+	padding: 10px;
+}
+
+.green{
+	color: green;
+}
+
+.red{
+	color: red;
+}
+
+#acl2_output{
+	display: none;
+	max-width: inherit;
+    overflow: auto;
+    position: relative
+}
+
+#output_display{
+	cursor: pointer;
+}
+
+#board_solution{
+	display: none;
+}
+
+#board_json{
+	position: relative;
+}
+
+#word_list{
+	position: relative;
+}
+
+#inside_container{
+	clear: both;
+	overflow: auto;
+}
+
+#main_table{
+	width: 100%;
+}
+
+.table_letter{
+	cursor: pointer;
+}

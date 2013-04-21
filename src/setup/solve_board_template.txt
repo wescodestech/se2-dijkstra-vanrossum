@@ -1,0 +1,8 @@
+:program
+:redef
+(set-iprint t)
+(set-guard-checking :none)
+(in-package "ACL2")
+(add-include-book-dir :teachpacks "{ACL2_TEACHPACKS}")
+(include-book "{ACL2_SRC_DIR}foutput")
+(solver->json '({BOARD}) '({LIST_WORDS}) {SOLVER_TYPE})
