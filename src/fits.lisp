@@ -1,9 +1,24 @@
+; fits.lisp
+;
+; This file contains all the necessary functions to determine if the value
+; that is to be placed in the crossword puzzle will fit into the location
+; of the random coordinate.
+;
 ; @Author Team Van Rossum
+;
+; Adapted by Team Dijkstra on April 23, 2013 Matthew Crist, Wesley Howell 
+; and Adam Ghodratnama
 ;
 ; fits.lisp
 ;
 ; Finds all of the appropriate places for the words
 ; to appear in the board when being built
+;
+; CHANGE LOG:
+; ------------------------------------------------------------------------
+; 2013-23-04 - Matthew A. Crist - Documented the functions with their 
+;              purpose, expected input structure and expected output
+;              structure.
 
 (in-package "ACL2")
 
@@ -11,16 +26,24 @@
 ;-----------------Start Find Placements------------------
 ;--------------------------------------------------------
 
-; Gets the end coordinate for the row
+; (get-end n nums)
+; Acquires the length of the row (which is a reference for the row coord)
+; n    - The increment to determine the row width
+; nums - The placement numbers in each row for free columns
+; 
+; returns - the number of elements in this list
 (defun get-end (n nums)
   (if (endp nums) n
       (if (= (car nums) n)
           (get-end (+ n 1) (cdr nums))
           (-  n 1))))
 
-
+; (start-end n nums)
 ; Gets the start and end coordinates for the row
 ; This returns a list of consec coordinates for row
+; n    - the incremental value to determine the starting point
+; nums - the row that contains the unused coordinates available for 
+;        placement.
 (defun start-end (n nums)
   (if (endp nums) '()
       (if (= n (car nums))
@@ -31,27 +54,59 @@
                       (start-end end  (nthcdr (+ 1 end) nums))))
           (start-end (+ n 1) nums))))
 
-; Init the start end coords
+; Locates the start coordinate in a row and the coord that is available
+; to the end of the list.
+; nums - The matrix of available placements in the form of:
+;        ( (0 1 2 3 4 5 6 7)
+;          (0 1 2 3 4 5 6 7)
+;          (0 4 5 6 7)
+;          (0 1 2 3 4 5 6 7)
+;          (0 1 2 3 4 5 6 7)
+;          (0 1 2 3 4 5 6 7)
+;          (0 1 2 3 4 5 6 7)
+;          (0 1 2 3 4 5 6 7) )
+; This would result in a format
+; (((0 8)) 
+;  ((0 8)) 
+;  ((0 0) (4 8))  <- Notice that 1-3 are used
+;  ((0 8)) 
+;  ((0 8)) 
+;  ((0 8)) 
+;  ((0 8)) 
+;  ((0 8)))
 (defun do-start-end (nums)
-  (if (endp nums) '()
+  (if (endp nums) 
+      '()
       (cons (start-end 0 (car nums)) 
             (do-start-end (cdr nums)))))
 
+#|----------------------------------------------------------------------|#
+#| These are supposed to be in column major form.                       |#
+#|----------------------------------------------------------------------|#
 
 ; now we will have the form for the coordinates
 ;((0,3) (0,6))
 (defun mtx-form-horiz-helper (n coord)
   (list (list n (car coord)) (list n (cadr coord))))
 
-; Have our spots in proper coordinates for placement  
+; (mtx-form-horiz n coords)
+; Converts each row into a set of proper coordinates (x y) that is a 
+; list of the range of coordinates that will be available for 
+; placement.
+; n - the column index (x)
+; coords - 
 (defun mtx-form-horiz (n coords)
   (if (endp coords) '()
       (cons (mtx-form-horiz-helper n (car coords)) 
             (mtx-form-horiz n (cdr coords)))))
 
-; Horizontal coordinates
+; (coords-horiz n nums)
+; Acquires the coordinates that are available for word placement.
+; n    - the start index for the x coordinate
+; nums - the column numbers that are available for placement.
 (defun coords-horiz (n nums)
-  (if (endp nums) '()
+  (if (endp nums) 
+      '()
       (if (equal nil (car nums)) ;nothing open here
           (coords-horiz (+ n 1) (cdr nums))
       (let* ((vects (start-end 0 (car nums)))
@@ -68,12 +123,14 @@
       (ckrow (+ n 1) (cdr row))
   )))
 
-
-; Gets all open coords for board
+; (open-brd-coords n brd)
+; Gets all open coords for board.
+; n - 
 (defun open-brd-coords (n brd)
-  (if (endp brd) '()
-    (cons (ckrow 0 (car brd) ) 
-	  ( open-brd-coords (+ n 1) (cdr brd)))))
+  (if (endp brd) 
+      '()
+      (cons (ckrow 0 (car brd))
+            ( open-brd-coords (+ n 1) (cdr brd)))))
 
 ;-----------------------------------------------------------
 ;------------------Find fits Horiz--------------------------
@@ -82,12 +139,10 @@
 ; Filter list down to coordinates that fit
 ; COLLISION DETECTION OCCURS HERE
 (defun fitsp (word coords)
-    (if ( <= (len word) 
-             (- (cadr (cadr coords)) 
-                    (cadr (car coords))))
+    (if ( <= (length word) (- (cadr (cadr coords)) (cadr (car coords))))
 	 t
          nil)) 
-
+		 
 ; Find our fit horizontally
 (defun fits (word coords)
   (if (endp coords) '()
@@ -96,7 +151,6 @@
           (fits word (cdr coords)))))
 
 ; Find all the areas that the word will fit given coordinates
-; coords is a list of tuples '((x y) (
 (defun do-fits (word coords)
   (if (endp coords) '()
       (cons (fits word (car coords)) 
@@ -114,11 +168,9 @@
 ;-----------------------------------------------------------
 ; Filter list down to coordinates that fit
 (defun fitsp-vert (word coords)
-    (if ( <= (len word) 
-             (- (caadr coords) 
-                    (caar coords)))
-	 t
-         nil)) 
+	(if ( <= (len word) (- (caadr coords) (caar coords)))
+		t
+		nil)) 
 
 
 (defun fits-vert (word coords)
