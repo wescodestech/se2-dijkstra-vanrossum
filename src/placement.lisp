@@ -122,7 +122,7 @@
   (nth (rand (len coords) seed) coords))
 
 ; Function just gathers all needed info
-; returns coordinate for where to pla2e
+; returns coordinate for where to place
 (defun fit-coords (type word brd seed)
   (if (< type 2) ; horizontal placement
       (let* ((opn (open-brd-coords 0 brd)) ;opn-brd_>final-coords->wd-fits->plc-cord
@@ -162,13 +162,30 @@
         (new-brd (row-rep brd word row-num y1)))
     new-brd)) ; return new board    
 
+; (plc-rd brd word coord)
+; Places a word into the board at the specified coordinate
+; brd - the word board
+; word - the word to be placed on the board
+; coord - the x/y coordinate for the word placement
+(defun plc-rd (brd word coord))
+(defun plc-ld (brd word coord))
+(defun plc-ru (brd word coord))
+(defun plc-lu (brd word coord))
 
+(defun collision (brd coord direction wrd-length))
+
+; Estimated 24 LOC
+	
  ;Place word on the board according to random num generator
 (defun place (brd word type coord)
   (cond ((= type 0) (plc-horiz brd word coord)) 
 	((= type 1) (plc-horiz brd (reverse word) coord))
         ((= type 2) (plc-vert brd word coord))
-        ((= type 3) (plc-vert brd (reverse word) coord))))
+        ((= type 3) (plc-vert brd (reverse word) coord)))
+		((= type 4) (plc-rd brd word coord))
+		((= type 5) (plc-ld brd word coord))
+		((= type 6) (plc-ru brd word coord))
+		((= type 7) (plc-lu brd word coord)))
 
 
 
@@ -176,7 +193,8 @@
 (defun plc-wdsrch (words brd seed)
   (if (endp words) '()
       (let* ((word (str->chrs (car words))) ;cnvrt str chrs
-             (type (rand 4 seed)) ;get the type we are placing
+             ;(type (rand 4 seed)) ;get the type we are placing
+			 (type (rand 8 seed))
              (coords (fit-coords type word brd (+ seed 57)))
              (new-brd (place brd word type  coords)));our new updated board
        
