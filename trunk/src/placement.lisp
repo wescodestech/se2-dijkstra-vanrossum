@@ -7,11 +7,9 @@
 
 (in-package "ACL2")
 
-
 (include-book "rand" :dir :teachpacks)
 (include-book "io-utilities" :dir :teachpacks)
 (include-book "list-utilities" :dir :teachpacks)
-
 
 (include-book "fits")
 
@@ -162,17 +160,85 @@
         (new-brd (row-rep brd word row-num y1)))
     new-brd)) ; return new board    
 
+#|======================================================================|#
+#| START OF DIJKSTRA CODE                                               |#
+#|======================================================================|#
+
+; (verify-placement word brd col-num row-num direction)
+; Verifies the placement of the word.  If the word does not meet any of 
+; the conditions (such as equivalent intercepts or board boundaries) 
+; then the function returns nil and the board must consider another 
+; placement coordinate or placement format.
+(verify-placement (word brd col-num row-num direction)
+                  ; Conditions to consider:
+                  ; 0 <= col-num <= (length (car brd))
+                  ; 0 <= row-num <= (length brd)
+                  ; (col-num row-num) == #\. or (car word)
+                  ; 
+                  (let* ((row-tuple (nth row-num brd))
+                         (col-value (nth col-num row-tuple)))
+                    (if (or (equal col-value (car word)) (equal col-value #\.))
+                        (if (equal direction "right-down")
+                            (verify-placement (cdr word) brd (+ col-num 1) (+ row-num 1) direction)
+                            (if (equal direction "right-up")
+                                (verify-placement (cdr word) brd (+ col-num 1) (- row-num 1) direction)
+                                (if (equal direction "left-down")
+                                    (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction)
+                                    (if (equal direction "left-up")
+                                        (verify-placement (cdr word) brd (-col-num 1) (- row-num 1) direction)
+                                        nil)))) ; Unknown placement format
+                        nil))) ; Item does not meet the conditions for placement
+
+(replace-characters (word brd col-num row-num direction))
+
 ; (plc-rd brd word coord)
 ; Places a word into the board at the specified coordinate
 ; brd - the word board
 ; word - the word to be placed on the board
 ; coord - the x/y coordinate for the word placement
-(defun plc-rd (brd word coord))
-(defun plc-ld (brd word coord))
-(defun plc-ru (brd word coord))
-(defun plc-lu (brd word coord))
+(defun plc-rd (brd word coord)
+  (let* ((row-num (caar coord))
+         (col-num (cadar coord))
+         (new-brd (replace-characters word brd col-num row-num "right-down")))
+    new-brd))
 
-(defun collision (brd coord direction wrd-length))
+; (plc-ld brd word coord)
+; Places a word in the board at the specified coordinate in the left-down
+; format.
+; brd - the current word board.
+; word - the word that is to be placed into the word board.
+; coord - the coordinate in which the word will be placed.
+(defun plc-ld (brd word coord)
+  (let* ((row-num (caar coord))
+         (col-num (cadar coord))
+         (new-brd (replace-characters word brd col-num row-num "left-down")))
+    new-brd))
+
+; (plc-ru brd word coord)
+; Places a word in the board at the specified coordinate in the right-up
+; format.
+; brd - the current word board.
+; word - the word that is to be placed into the board.
+; coord - the location the word will be placed.
+(defun plc-ru (brd word coord)
+  (let* ((row-num (caar coord))
+         (col-num (cadar coord))
+         (new-brd (replace-characters word brd col-num row-num "right-up")))
+    new-brd))
+
+; (plc-lu brd word coord)
+; Places a word in the board at the specified coordinate in the left-up
+; format.
+; brd - the current word board.
+; word - the word that is to be placed into the board.
+; coord - the location the word will be placed.
+(defun plc-lu (brd word coord)
+  (let* ((row-num (caar coord))
+         (col-num (cadar coord))
+         (new-brd (replace-characters word brd col-num row-num "left-up")))
+    new-brd))
+
+;(defun collision (brd coord direction wrd-length))
 
 ; Estimated 24 LOC
 	
