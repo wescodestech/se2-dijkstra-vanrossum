@@ -80,6 +80,7 @@
 ;-----------------------------------------------------------
 
 ; Filter list down to coordinates that fit
+; COLLISION DETECTION OCCURS HERE
 (defun fitsp (word coords)
     (if ( <= (len word) 
              (- (cadr (cadr coords)) 
@@ -94,13 +95,18 @@
           (cons (car coords) (fits word (cdr coords)))
           (fits word (cdr coords)))))
 
-; Find all the areas that the word will fit given co
+; Find all the areas that the word will fit given coordinates
+; coords is a list of tuples '((x y) (
 (defun do-fits (word coords)
   (if (endp coords) '()
       (cons (fits word (car coords)) 
             (do-fits word (cdr coords)))))    
     
 ;----------------------------------------------------End do fits
+
+; ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+;                                                                            COLLISION DETECTION OCCURS HERE
+
 
 
 ;-----------------------------------------------------------
@@ -128,7 +134,6 @@
             (do-fits-vert word (cdr coords)))))    
     
 ;-----------------------------------------------------
-
 
 ;----------------------------------------------------------------
 ;-------------Convert open spots to vert coords------------------
