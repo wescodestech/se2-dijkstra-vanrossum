@@ -189,11 +189,75 @@
                              (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction)
                              (if (equal direction "left-up")
                                  (verify-placement (cdr word) brd (- col-num 1) (- row-num 1) direction)
-                                 nil)))) ; Unknown placement format
+                                 (if (equal direction "down")
+                                     (verify-placement (cdr word) brd col-num (+ row-num 1) direction)
+                                     (if (equal direction "up")
+                                         (verify-placement (cdr word) brd col-num (- row-num 1) direction)
+                                         (if (equal direction "left")
+                                             (verify-placement (cdr word) brd (- col-num 1) row-num direction)
+                                             (if (equal direction "right")
+                                                 (verify-placement (cdr word) brd (+ col-num 1) row-num direction)
+                                                 nil)))))))) ; Unknown placement format
                  nil))))) ; Item does not meet the conditions for placement
 
+(defun get-rows-after (brd row-num)
+  (if (equal row-num 0)
+      (cdr brd)
+     (get-rows-after (cdr brd) (- row-num 1))))
+
+(defun get-rows-before (brd row-num)
+  (if (equal row-num 0)
+      nil
+      (cons (car brd) (get-rows-before (cdr brd) (- row-num 1)))))
+
+(defun get-row-at (brd row-num)
+  (if (equal row-num 0)
+      (car brd)
+      (get-row-at (cdr brd) (- row-num 1))))
+
+(defun get-cols-after (row col-num)
+  (if (equal col-num 0)
+      (cdr row)
+      (get-cols-after (cdr row) (- col-num 1))))
+
+(defun get-cols-before (row col-num)
+  (if (equal col-num 0)
+      nil
+      (cons (car row) (get-cols-before (cdr row) (- col-num 1)))))
+
 (defun replace-characters (word brd col-num row-num direction)
-                    t)
+  (if (verify-placement word brd col-num row-num direction)
+      ; Place word onto the board
+      (if (equal nil (car word))
+          brd ; We have no more letters to place
+          (let* ((front (get-rows-before brd row-num))
+                 (back (get-rows-after brd row-num))
+                 (change (get-row-at brd row-num))
+                 (fcol (get-cols-before change col-num))
+                 (bcol (get-cols-after change col-num))
+                 (nrow (cons (append fcol (car word)) bcol))
+                 (nbrd (cons (append front nrow) back)))
+            (if (equal direction "right")
+                (replace-characters (cdr word) nbrd (+ col-num 1) row-num direction)
+                (if (equal direction "left")
+                    (replace-characters (cdr word) nbrd (- col-num 1) row-num direction)
+                    (if (equal direction "up")
+                        (replace-characters (cdr word) nbrd col-num (- row-num 1) direction)
+                        (if (equal direction "down")
+                            (replace-characters (cdr word) nbrd col-num (+ row-num 1) direction)
+                            (if (equal direction "right-down")
+                                (replace-characters (cdr word) nbrd (+ col-num 1) (+ row-num 1) direction)
+                                (if (equal direction "right-up")
+                                    (replace-characters (cdr word) nbrd (+ col-num 1) (- row-num 1) direction)
+                                    (if (equal direction "left-down")
+                                        (replace-characters (cdr word) nbrd (- col-num 1) (+ row-num 1) direction)
+                                        (if (equal direction "left-up")
+                                            (replace-characters (cdr word) nbrd (- col-num 1) (- row-num 1) direction)
+                                            nil)))))))))) ; Unknown placement
+                                       
+      ; Find another placement method
+      ; Return the original board for now
+      brd))
 
 ; (plc-rd brd word coord)
 ; Places a word into the board at the specified coordinate
