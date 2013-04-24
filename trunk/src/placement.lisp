@@ -169,27 +169,31 @@
 ; the conditions (such as equivalent intercepts or board boundaries) 
 ; then the function returns nil and the board must consider another 
 ; placement coordinate or placement format.
-(verify-placement (word brd col-num row-num direction)
-                  ; Conditions to consider:
-                  ; 0 <= col-num <= (length (car brd))
-                  ; 0 <= row-num <= (length brd)
-                  ; (col-num row-num) == #\. or (car word)
-                  ; 
-                  (let* ((row-tuple (nth row-num brd))
-                         (col-value (nth col-num row-tuple)))
-                    (if (or (equal col-value (car word)) (equal col-value #\.))
-                        (if (equal direction "right-down")
-                            (verify-placement (cdr word) brd (+ col-num 1) (+ row-num 1) direction)
-                            (if (equal direction "right-up")
-                                (verify-placement (cdr word) brd (+ col-num 1) (- row-num 1) direction)
-                                (if (equal direction "left-down")
-                                    (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction)
-                                    (if (equal direction "left-up")
-                                        (verify-placement (cdr word) brd (-col-num 1) (- row-num 1) direction)
-                                        nil)))) ; Unknown placement format
-                        nil))) ; Item does not meet the conditions for placement
+(defun verify-placement (word brd col-num row-num direction)
+   ; We have checked all possible permutations of the word and our col-num
+   ; and row-nums are within the boundaries of the board.
+   (if (and (equal nil (car word))
+            (> (length brd) row-num)
+            (> (length (car brd)) col-num))
+       t
+       (if (or (> row-num (length brd)) (> col-num (length (car brd))))
+           nil
+           (let* ((row-tuple (nth row-num brd))
+                  (col-value (nth col-num row-tuple)))
+             (if (or (equal col-value (car word)) (equal col-value #\.))
+                 (if (equal direction "right-down")
+                     (verify-placement (cdr word) brd (+ col-num 1) (+ row-num 1) direction)
+                     (if (equal direction "right-up")
+                         (verify-placement (cdr word) brd (+ col-num 1) (- row-num 1) direction)
+                         (if (equal direction "left-down")
+                             (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction)
+                             (if (equal direction "left-up")
+                                 (verify-placement (cdr word) brd (- col-num 1) (- row-num 1) direction)
+                                 nil)))) ; Unknown placement format
+                 nil))))) ; Item does not meet the conditions for placement
 
-(replace-characters (word brd col-num row-num direction))
+(defun replace-characters (word brd col-num row-num direction)
+                    t)
 
 ; (plc-rd brd word coord)
 ; Places a word into the board at the specified coordinate
@@ -247,11 +251,11 @@
   (cond ((= type 0) (plc-horiz brd word coord)) 
 	((= type 1) (plc-horiz brd (reverse word) coord))
         ((= type 2) (plc-vert brd word coord))
-        ((= type 3) (plc-vert brd (reverse word) coord)))
+        ((= type 3) (plc-vert brd (reverse word) coord))
 		((= type 4) (plc-rd brd word coord))
 		((= type 5) (plc-ld brd word coord))
 		((= type 6) (plc-ru brd word coord))
-		((= type 7) (plc-lu brd word coord)))
+		((= type 7) (plc-lu brd word coord))))
 
 
 
