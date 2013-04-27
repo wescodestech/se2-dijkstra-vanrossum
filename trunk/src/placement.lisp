@@ -366,23 +366,48 @@
         ; Left upward placement
         ((= orientation 7) (list (- (car start-coord) (- word-length 1)) (- (cadr start-coord) (- word-length 1))))))
 
-; Main workhorse of this module places word search
 
+; (plc-wdsrch words brd seed)
+; Entry point for the placement module. 
+; words - a list of words as strings '("word1" "word2" ... "wordn")
+; brd - a game board with solutions (list (list (list #\. #\. #\.)
+;                                               (list #\. #\. #\.)
+;                                               (list #\. #\. #\.)) 
+;                                               '())
+; seed - an integer for the random  numbers
 (defun plc-wdsrch (words brd seed)
   (if (endp words)
-      '()
+      brd
       (let* ((word (str->chrs (car words)))
              (letter-board (car brd))
              (solutions    (cdr brd))
              (type (rand 8 seed))
-             (x-coord (rand 12 seed))
-             (y-coord (rand 12 seed))
+             (new-seed (next-seed seed))
+             (x-coord (rand 12 new-seed))
+             (another-seed (next-seed seed))
+             (y-coord (rand 12 another-seed))
              (start-coord (list x-coord y-coord))
              (new-board (place letter-board word type start-coord))
              (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
              (new-solutions (append solutions (list new-word-solution)))
-             (new-brd (cons new-board new-solutions)))
-        new-brd)))
+             (new-brd (cons new-board new-solutions))
+             )
+        (plc-wdsrch (cdr words) new-brd (next-seed another-seed)))))
+
+;(plc-wdsrch (list "hello" "test" "world") 
+;            (list (list (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
+; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)) '()) 78)
 
 ; Old unused code
 #|
