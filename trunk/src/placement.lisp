@@ -119,6 +119,7 @@
 (defun rand-coord (seed coords)
   (nth (rand (len coords) seed) coords))
 
+
 ; Function just gathers all needed info
 ; returns coordinate for where to place
 (defun fit-coords (type word brd seed)
@@ -137,25 +138,19 @@
         (ret-cords (rand-start (car rcords) word seed type)))
       ret-cords)))
 
-
-
-
 ;-------------------------------------------------------------------
 ;---------Place these words in the Board----------------------------
 ;-------------------------------------------------------------------
-
+#|
 ; Place this word vertically dog
-#| Old code no longer in use
 (defun plc-vert (brd word coords)
   (let* ((col-num (cadar coords))
          (y1 (caar coords))
          (new-brd (col-rep brd word y1 col-num )))
-    new-brd)) |#
-
+    new-brd))
 
 ;Find a place letters horizontally
 ;across the game-board this will do it
-#| Old code no longer in use.
 (defun plc-horiz (brd word coords)
    (let* ((row-num (caar coords))
         (y1 (cadar coords)) ; y1 value for placement
@@ -171,188 +166,182 @@
 ; the conditions (such as equivalent intercepts or board boundaries) 
 ; then the function returns nil and the board must consider another 
 ; placement coordinate or placement format.
+; word - the list of characters that represent the word to be placed on 
+;        the board.
+; brd - the matrix of letters that represent the board (list of lists of 
+;       characters).
+; col-num - the column number for placement.
+; row-num - the row number for placement.
+; direction - the direction in which the word is to be placed.
 (defun verify-placement (word brd col-num row-num direction)
-   ; We have checked all possible permutations of the word and our col-num
-   ; and row-nums are within the boundaries of the board.
-  (if (not (natp col-num))
-      nil
-   (if (and (equal nil (car word))
-            (> (length brd) row-num)
-            (> (length (car brd)) col-num)
-            (or (< 0 col-num) (equal col-num 0))
-            (or (< 0 row-num) (equal row-num 0)))
-       t
-       (if (or (> row-num (length brd)) (> col-num (length (car brd))))
-           nil
-           (let* ((row-tuple (nth row-num brd))
-                  (col-value (nth col-num row-tuple)))
-             (if (or (equal col-value (car word)) (equal col-value #\.))
-                 (if (equal direction "right-down")
-                     (verify-placement (cdr word) brd (+ col-num 1) (+ row-num 1) direction)
-                     (if (equal direction "right-up")
-                         (verify-placement (cdr word) brd (+ col-num 1) (- row-num 1) direction)
-                         (if (equal direction "left-down")
-                             (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction)
-                             (if (equal direction "left-up")
-                                 (verify-placement (cdr word) brd (- col-num 1) (- row-num 1) direction)
-                                 (if (equal direction "down")
-                                     (verify-placement (cdr word) brd col-num (+ row-num 1) direction)
-                                     (if (equal direction "up")
-                                         (verify-placement (cdr word) brd col-num (- row-num 1) direction)
-                                         (if (equal direction "left")
-                                             (verify-placement (cdr word) brd (- col-num 1) row-num direction)
-                                             (if (equal direction "right")
-                                                 (verify-placement (cdr word) brd (+ col-num 1) row-num direction)
-                                                 nil)))))))) ; Unknown placement format
-                 nil)))))) ; Item does not meet the conditions for placement
-
+  (if (and (natp col-num)
+           (natp row-num))
+      (if (and (> (length brd) row-num)
+               (> (length (car brd)) col-num)
+               (or (< 0 col-num) (equal col-num 0))
+               (or (< 0 row-num) (equal row-num 0)))
+          (if (endp word)
+              t ; There are no more letters to verify and the meet the conditions
+              (let* ((row    (nth row-num brd))
+                     (column (nth col-num row)))
+                (if (or (equal column (car word))
+                        (equal column #\.))
+                    (cond ((equal direction "right-down")
+                           (verify-placement (cdr word) brd (+ col-num 1) (+ row-num 1) direction))
+                          ((equal direction "right-up")
+                           (verify-placement (cdr word) brd (+ col-num 1) (- row-num 1) direction))
+                          ((equal direction "left-down")
+                           (verify-placement (cdr word) brd (- col-num 1) (+ row-num 1) direction))
+                          ((equal direction "left-up")
+                           (verify-placement (cdr word) brd (- col-num 1) (- row-num 1) direction))
+                          ((equal direction "down")
+                           (verify-placement (cdr word) brd col-num (+ row-num 1) direction))
+                          ((equal direction "up")
+                           (verify-placement (cdr word) brd col-num (- row-num 1) direction))
+                          ((equal direction "left")
+                           (verify-placement (cdr word) brd (- col-num 1) row-num direction))
+                          ((equal direction "right")
+                           (verify-placement (cdr word) brd (+ col-num 1) row-num direction)))
+                    nil))) ; Word cannot interst (collision issue)
+          nil) ; Word is outside of the bounds of the board
+      nil)) ; Row and column do not exist - negative values
+                              
+; (get-rows-after brd row-num)
+; Acquires all rows after a given row-num.
+; brd - the board matrix (list of lists) that contain the row information.
+; row-num - the number of the row after which you wish to acquire rows.
 (defun get-rows-after (brd row-num)
   (if (equal row-num 0)
      (cdr brd)
      (get-rows-after (cdr brd) (- row-num 1))))
 
+; (get-rows-before brd row-num)
+; Acquires all rows before a given row-num.
+; brd - the board matrix (list of lists) that contain the row information.
+; row-num - the number of the row before which you wish to acquire rows.
 (defun get-rows-before (brd row-num)
   (if (equal row-num 0)
       '()
-      (append (list (list (car brd))) (get-rows-before (cdr brd) (- row-num 1)))))
+      (append (list (car brd)) (get-rows-before (cdr brd) (- row-num 1)))))
 
+; (get-row-at brd row-num)
+; Acquires the row at a given row-num.
+; brd - the board matrix (list of lists) that contain the row information.
+; row-num - the row in which you wish to acquire from the matrix.
+; ** It is important to note that this returns the row tuple and not a 
+;    list of lists like the previous boundary acquisition functions.
 (defun get-row-at (brd row-num)
   (if (equal row-num 0)
       (car brd)
       (get-row-at (cdr brd) (- row-num 1))))
 
+; (get-cols-after row col-num)
+; Acquires the columns that occur after a given col-num.
+; row - the list of columns in a row.
+; col-num - the column after which you wish to acquire the columns.
 (defun get-cols-after (row col-num)
   (if (equal col-num 0)
       (cdr row)
       (get-cols-after (cdr row) (- col-num 1))))
 
+; (get-cols-before row col-num)
+; Acquires the columns that occur before a given col-num.
+; row - the list of columns in a row.
+; col-num - he column before which you wish to acquire the columns.
 (defun get-cols-before (row col-num)
   (if (equal col-num 0)
       nil
       (cons (car row) (get-cols-before (cdr row) (- col-num 1)))))
 
+; (replace-characters word brd col-num row-num direction)
+; Replaces a character at the given row and column.  The direction determines
+; the next replacement coordinate until all the letters in the word have been
+; placed onto the board.
+; word - the list of characters that will be placed on the board.
+; brd  - the list of lists of characters that currently make up the board.
+; col-num - the column index that is to be replaced.
+; row-num - the row index that is to be replaced.
+; direction - the direction that the characters will be replaced (next index).
 (defun replace-characters (word brd col-num row-num direction)
-  (if (verify-placement word brd col-num row-num direction)
-      ; Place word onto the board
-      (if (equal nil (car word))
-          brd ; We have no more letters to place
-          (let* ((front (get-rows-before brd row-num))
-                 (back (get-rows-after brd row-num))
-                 (change (get-row-at brd row-num))
-                 (fcol (get-cols-before change col-num))
-                 (bcol (get-cols-after change col-num))
-                 (nrow (append fcol (cons (car word) bcol)))
-                 (nbrd (append front (cons nrow back))))
-            (if (equal direction "right")
-                (replace-characters (cdr word) nbrd 
-                   (+ col-num 1) row-num direction)
-                (if (equal direction "left")
-                    (replace-characters (cdr word) nbrd 
-                       (- col-num 1) row-num direction)
-                    (if (equal direction "up")
-                        (replace-characters (cdr word) nbrd 
-                           col-num (- row-num 1) direction)
-                        (if (equal direction "down")
-                            (replace-characters (cdr word) nbrd 
-                               col-num (+ row-num 1) direction)
-                            (if (equal direction "right-down")
-                                (replace-characters (cdr word) nbrd 
-                                   (+ col-num 1) (+ row-num 1) direction)
-                                (if (equal direction "right-up")
-                                    (replace-characters (cdr word) nbrd (+ col-num 1) (- row-num 1) direction)
-                                    (if (equal direction "left-down")
-                                        (replace-characters (cdr word) nbrd (- col-num 1) (+ row-num 1) direction)
-                                        (if (equal direction "left-up")
-                                            (replace-characters (cdr word) nbrd (- col-num 1) (- row-num 1) direction)
-                                            nil)))))))))) ; Unknown placement
-                                       
-      ; Find another placement method
-      ; Return the original board for now
-      brd))
-
-; (plc-rd brd word coord)
-; Places a word into the board at the specified coordinate
-; brd - the word board
-; word - the word to be placed on the board
-; coord - the x/y coordinate for the word placement
-(defun plc-rd (brd word coord)
-  (let* ((row-num (caar coord))
-         (col-num (cadar coord))
-         (new-brd (replace-characters word brd col-num row-num "right-down")))
-    new-brd))
-
-; (plc-ld brd word coord)
-; Places a word in the board at the specified coordinate in the left-down
-; format.
-; brd - the current word board.
-; word - the word that is to be placed into the word board.
-; coord - the coordinate in which the word will be placed.
-(defun plc-ld (brd word coord)
-  (let* ((row-num (caar coord))
-         (col-num (cadar coord))
-         (new-brd (replace-characters word brd col-num row-num "left-down")))
-    new-brd))
-
-; (plc-ru brd word coord)
-; Places a word in the board at the specified coordinate in the right-up
-; format.
-; brd - the current word board.
-; word - the word that is to be placed into the board.
-; coord - the location the word will be placed.
-(defun plc-ru (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "right-up")))
-    new-brd))
-
-; (plc-lu brd word coord)
-; Places a word in the board at the specified coordinate in the left-up
-; format.
-; brd - the current word board.
-; word - the word that is to be placed into the board.
-; coord - the location the word will be placed.
-(defun plc-lu (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "left-up")))
-    new-brd))
-
-(defun plc-r (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "right")))
-    new-brd))
-
-(defun plc-l (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "left")))
-    new-brd))
-
-(defun plc-u (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "up")))
-    new-brd))
-
-(defun plc-d (brd word coord)
-  (let* ((row-num (car coord))
-         (col-num (cadr coord))
-         (new-brd (replace-characters word brd col-num row-num "down")))
-    new-brd))
+  (if (endp word)
+      brd ; We have no more letters to place
+      (let* ((front  (get-rows-before brd row-num))
+             (back   (get-rows-after brd row-num))
+             (change (get-row-at brd row-num))
+             (fcol   (get-cols-before change col-num))
+             (bcol   (get-cols-after change col-num))
+             (nrow   (append fcol (cons (car word) bcol)))
+             (nbrd   (append front (cons nrow back))))
+        (cond ((equal direction "right")      (replace-characters (cdr word) nbrd (+ col-num 1) row-num       direction))
+              ((equal direction "left")       (replace-characters (cdr word) nbrd (- col-num 1) row-num       direction))
+              ((equal direction "up")         (replace-characters (cdr word) nbrd col-num       (- row-num 1) direction))
+              ((equal direction "down")       (replace-characters (cdr word) nbrd col-num       (+ row-num 1) direction))
+              ((equal direction "right-down") (replace-characters (cdr word) nbrd (+ col-num 1) (+ row-num 1) direction))
+              ((equal direction "right-up")   (replace-characters (cdr word) nbrd (+ col-num 1) (- row-num 1) direction))
+              ((equal direction "left-down")  (replace-characters (cdr word) nbrd (- col-num 1) (+ row-num 1) direction))
+              ((equal direction "left-up")    (replace-characters (cdr word) nbrd (- col-num 1) (- row-num 1) direction))))))
 	
 ; (place brd word type coord)
-; 
- ;Place word on the board according to random num generator
+; Place word on the board at the given coordinate in the direction 
+; specified.  We first do a dry run with verify-placement and if 
+; that function returns true, we are able to place our word onto the 
+; board without conflict.  If we are not able to place it on the board, 
+; we return the original board.  ** This is intended to be replaced by
+; randomly selecting another place for the word on the board.
+; brd   - the board in which to place the word.
+; word  - the word that will be placed into the board.
+; type  - the orientation of placement for the word.
+; coord - the coordinate (col row) to place the word.
 (defun place (brd word type coord)
-  (cond ((= type 0) (plc-r brd word coord)) 
-	((= type 1) (plc-l brd word coord))
-        ((= type 2) (plc-d brd word coord))
-        ((= type 3) (plc-u brd word coord))
-	((= type 4) (plc-rd brd word coord))
-	((= type 5) (plc-ld brd word coord))
-	((= type 6) (plc-ru brd word coord))
-	((= type 7) (plc-lu brd word coord))))
+  (let* ((column (car coord))
+         (row    (cadr coord)))
+        ; Right placement
+    (cond ((= type 0) 
+           (if (verify-placement word brd column row "right")
+               (replace-characters word brd column row "right")
+               brd))
+          
+          ; Left placement
+          ((= type 1) 
+           (if (verify-placement word brd column row "left")
+               (replace-characters word brd column row "left")
+               brd))
+          
+          ; Down placement
+          ((= type 2) 
+           (if (verify-placement word brd column row "down")
+               (replace-characters word brd column row "down")
+               brd))
+          
+          ; Up placement
+          ((= type 3)
+           (if (verify-placement word brd column row "up")
+               (replace-characters word brd column row "up")
+               brd))
+          
+          ; Right-Down placement
+	  ((= type 4) 
+           (if (verify-placement word brd column row "right-down")
+               (replace-characters word brd column row "right-down")
+               brd))
+          
+          ; Left-Down placement
+	  ((= type 5)
+           (if (verify-placement word brd column row "left-down")
+               (replace-characters word brd column row "left-down")
+               brd))
+          
+          ; Right-Up placement
+	  ((= type 6) 
+           (if (verify-placement word brd column row "right-up")
+               (replace-characters word brd column row "right-up")
+               brd))
+          
+          ; Left-Up placement
+	  ((= type 7) 
+           (if (verify-placement word brd column row "left-up")
+               (replace-characters word brd column row "left-up")
+               brd)))))
 
 ; (get-end-coords start-coord word-length orientation)
 ; Acquires the endpoint coordinate of the word based on its placement on the board.
@@ -377,13 +366,14 @@
         ; Left upward placement
         ((= orientation 7) (list (- (car start-coord) (- word-length 1)) (- (cadr start-coord) (- word-length 1))))))
 
- ;Main workhorse of this module places word search
+; Main workhorse of this module places word search
+
 (defun plc-wdsrch (words brd seed)
   (if (endp words)
-      brd
+      '()
       (let* ((word (str->chrs (car words)))
              (letter-board (car brd))
-             (solutions    (cadr brd))
+             (solutions    (cdr brd))
              (type (rand 8 seed))
              (x-coord (rand 12 seed))
              (y-coord (rand 12 seed))
@@ -394,13 +384,6 @@
              (new-brd (cons new-board new-solutions)))
         new-brd)))
 
-
-
-
-
-
-
-
 ; Old unused code
 #|
 (defun plc-wdsrch (words brd seed)
@@ -410,7 +393,7 @@
              ;(type (rand 4 seed)) ;get the type we are placing
              (type (rand 8 seed))
              (coords (fit-coords type word brd (+ seed 57)))
-             (new-brd (place brd word type coords)));our new updated board
+             (new-brd (place (car brd) word type coords)));our new updated board
        
         (if (or (= type 1) (= type 3) (= type 6) (= type 7))
             (cons (cons (cons (car words) (reverse coords)) new-brd) (plc-wdsrch (cdr words) new-brd (+ 99 seed)))
