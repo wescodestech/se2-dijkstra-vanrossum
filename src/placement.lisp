@@ -8,158 +8,6 @@
 (in-package "ACL2")
 
 (include-book "rand" :dir :teachpacks)
-(include-book "io-utilities" :dir :teachpacks)
-(include-book "list-utilities" :dir :teachpacks)
-
-(include-book "fits")
-
-;----------------------------------------------------------------
-;---------X,Y placement-----------------------------------------
-;---------------------------------------------------------------
-
-;Get specified row of the board
-(defun get-row (brd n)
-  (nth n brd))
-
-; Returns the column for replacement
-(defun get-column (brd  col)
-  (if (endp brd) '()
-  (cons (nth col (car brd)) 
-        (get-column (cdr brd) col))))
-
-
-;Updates the board by putting the modified row
-; into its right place making a new board
-(defun update-row (brd brd-length row row-num n)
-  (if (= n brd-length) nil ;finish
-  (if (= n row-num)
-      (cons  row 
-	     (update-row 
-	      (cdr brd) brd-length row row-num (+ 1 n)))
-      (cons (car brd) 
-            (update-row (cdr brd) brd-length 
-                        row  
-                        row-num   
-                      (+ 1 n)))) ))
-
-; Helper method for placing at spec indx
-(defun plc-indx-helper (n y row char)
-  (if (endp row) '()
-    (if (= n y )
-	(cons char (plc-indx-helper (+ 1 n) y (cdr row) char))
-      (cons (car row) (plc-indx-helper (+ 1 n) y (cdr row) char)))))
-
-
-
-; Places character at specified index
-(defun plc-indx (brd x y char)
-  (let* ((row (get-row brd x))
-	 (new-row (plc-indx-helper 0 y row char)))
-     (update-row brd (len brd) new-row x 0)))
-
-
-
-; Replaces column
-(defun col-rep (brd chrs y col)
-  (if (endp chrs) brd
-      (let* ((new-brd (plc-indx brd y col (car chrs))))
-        (col-rep new-brd (cdr chrs) (+ 1 y) col))))
-
-
-;Replace row
-(defun row-rep (brd chrs y col)
-  (if (endp chrs) brd
-      (let* ((new-brd (plc-indx brd y col (car chrs))))
-        (row-rep new-brd (cdr chrs) y (+ 1 col) ))))
-
-
-
-
-;----------------------------------------------End Board Modifications
-
-
-; Picks a random starting point for horizontal placement
-(defun rand-start-horiz (start range word row-num seed)
-  (let* ((new-start (+ start (rand range seed)))
-              (new-end (+ new-start (len word))))
-        (list (list row-num new-start) (list row-num new-end)) ))
-
-; Picks a random starting point for vertical placement
-(defun rand-start-vert (start range word row-num seed)
-  (let*  ((new-start (+ start (rand (- range 1) seed)))
-             (new-end (+ new-start (len word))))
-        (list (list new-start row-num) (list new-end row-num))))
-
-;word len = 5 
-; start 0 
-; end 10
-; diff 10
-; new-start = rand( diff - lenword start anywhere between 0, 5  
-(defun rand-start (coords word seed type)
-  (if (< type 2)
-      (let* ((start (cadar coords))
-              (end (cadadr coords))
-              (row-num (caar coords))
-              (diff (- end start))
-              (range (- diff (len word))))
-        (if (<= range 2)
-            coords
-            (rand-start-horiz start range word row-num (+ 19 seed)))) ;ugly function              
-      (let* ((start (caar coords))
-             (row-num (cadar coords))
-             (end (caadr coords))
-             (diff (- end start))
-             (range (- diff (len word))))
-     (if (<= range 2)
-            coords
-            (rand-start-vert start range word row-num (+ 12 seed))))))
-         
-
-; Randomly picks a coord from coords list for placement
-(defun rand-coord (seed coords)
-  (nth (rand (len coords) seed) coords))
-
-
-; Function just gathers all needed info
-; returns coordinate for where to place
-(defun fit-coords (type word brd seed)
-  (if (< type 2) ; horizontal placement
-      (let* ((opn (open-brd-coords 0 brd)) ;opn-brd_>final-coords->wd-fits->plc-cord
-             (mf (coords-horiz 0 opn))
-             (wd-fits (do-fits word mf))
-             (rcords (rand-coord seed (remove nil wd-fits)))
-             (ret-cords (rand-start (car rcords) word seed type)))
-       ret-cords)
-      (let* ((opn (open-brd-coords 0 brd)) ; else vertical placement
-             
-             (mf (coords-vert 0 (openv 0  opn)))
-             (wd-fits (do-fits-vert word mf))
-            (rcords (rand-coord seed (remove nil wd-fits)))
-        (ret-cords (rand-start (car rcords) word seed type)))
-      ret-cords)))
-
-;-------------------------------------------------------------------
-;---------Place these words in the Board----------------------------
-;-------------------------------------------------------------------
-#|
-; Place this word vertically dog
-(defun plc-vert (brd word coords)
-  (let* ((col-num (cadar coords))
-         (y1 (caar coords))
-         (new-brd (col-rep brd word y1 col-num )))
-    new-brd))
-
-;Find a place letters horizontally
-;across the game-board this will do it
-(defun plc-horiz (brd word coords)
-   (let* ((row-num (caar coords))
-        (y1 (cadar coords)) ; y1 value for placement
-        (new-brd (row-rep brd word row-num y1)))
-    new-brd)) ; return new board     |#
-
-#|======================================================================|#
-#| START OF DIJKSTRA CODE                                               |#
-#|======================================================================|#
 
 ; (verify-placement word brd col-num row-num direction)
 ; Verifies the placement of the word.  If the word does not meet any of 
@@ -297,39 +145,75 @@
          (row    (cadr coord)))
         ; Right placement
     (cond ((= type 0) 
-           (if (verify-placement word brd column row "right")
-               (replace-characters word brd column row "right")
-               brd))
+           (if (> (- (length (cadr brd)) 1) (+ column (- (length word) 1)))
+               (let* ((overflow (- (+ column (length word)) (length (cadr brd))))
+                      (new-col  (- column overflow)))
+                 (if (verify-placement word brd new-col row "right")
+                     (replace-characters word brd new-col row "right")
+                     brd))
+               (if (verify-placement word brd column row "right")
+                   (replace-characters word brd column row "right")
+                   brd)))
           
           ; Left placement
           ((= type 1) 
-           (if (verify-placement word brd column row "left")
-               (replace-characters word brd column row "left")
-               brd))
+           (if (> 0 (- column (- (length word) 1)))
+               (let* ((overflow (abs (- column (length word))))
+                      (new-col  (+ column (- overflow 1))))
+                 (if (verify-placement word brd new-col row "left")
+                     (replace-characters word brd new-col row "left")
+                     brd))
+               (if (verify-placement word brd column row "left")
+                   (replace-characters word brd column row "left")
+                   brd)))
           
           ; Down placement
-          ((= type 2) 
-           (if (verify-placement word brd column row "down")
-               (replace-characters word brd column row "down")
-               brd))
+          ((= type 2)
+           (if (> (+ row (- (length word) 1)) (- (length brd) 1))
+               (let* ((overflow (- (+ row (length word)) (length brd)))
+                      (new-row  (- column (- overflow 1))))
+                 (if (verify-placement word brd column new-row "down")
+                     (replace-characters word brd column new-row "down")
+                     brd))
+               (if (verify-placement word brd column row "down")
+                   (replace-characters word brd column row "down")
+                   brd)))
           
           ; Up placement
           ((= type 3)
-           (if (verify-placement word brd column row "up")
-               (replace-characters word brd column row "up")
-               brd))
+           (if (> 0 (- row (- (length word) 1)))
+               (let* ((overflow (abs (- row (- (length word) 1))))
+                      (new-row (+ row overflow)))
+                 (if (verify-placement word brd column new-row "up")
+                     (replace-characters word brd column new-row "up")
+                     brd))
+               (if (verify-placement word brd column row "up")
+                   (replace-characters word brd column row "up")
+                   brd)))
           
           ; Right-Down placement
-	  ((= type 4) 
-           (if (verify-placement word brd column row "right-down")
-               (replace-characters word brd column row "right-down")
-               brd))
+	  ((= type 4)
+           (let* ((actual-row (if (> (+ row (length word)) (- (length brd) 1))
+                                  (- row (- (+ row (length word)) (- (length brd) 1)))
+                                  row))
+                  (actual-col (if (> (+ column (length word)) (- (length (car brd)) 1))
+                                  (- column (- (+ column (length word)) (- (length (car brd)) 1)))
+                                  column)))
+             (if (verify-placement word brd actual-col actual-row "right-down")
+                     (replace-characters word brd actual-col actual-row "right-down")
+                     brd)))
           
           ; Left-Down placement
 	  ((= type 5)
-           (if (verify-placement word brd column row "left-down")
-               (replace-characters word brd column row "left-down")
-               brd))
+           (let* ((actual-row (if (> (+ row (length word)) (- (length brd) 1))
+                                  (- row (- (+ row (length word)) (- (length brd) 1)))
+                                  row))
+                  (actual-col (if (> 0 (- column (length word)))
+                                  (+ column (abs (- column (length word))))
+                                  column)))
+             (if (verify-placement word brd actual-col actual-row "left-down")
+                     (replace-characters word brd actual-col actual-row "left-down")
+                     brd)))
           
           ; Right-Up placement
 	  ((= type 6) 
@@ -366,6 +250,314 @@
         ; Left upward placement
         ((= orientation 7) (list (- (car start-coord) (- word-length 1)) (- (cadr start-coord) (- word-length 1))))))
 
+; (is-in-matrix col row bounds)
+; This function is used to determine if the point is within the bounds of
+; the matrix.
+; col - the x coordinate.
+; row - the y coordinate.
+; bounds - the length of the list of columns of the matrix which should 
+;          be equivalent to the length of the rows in the matrix.
+(defun is-in-matrix (col row bounds)
+  (if (and (or (> col 0) (= col 0))
+           (< col bounds)
+           (or (> row 0) (= row 0))
+           (< row bounds))
+      t
+      nil))
+
+; (generate-new-coord bounds seed)
+; Generates a new coordinate based on the bounds and the seed that is
+; fed to the function.
+; bounds - the integer values that determines the limit of the row and 
+;          column.  Since the matrix is a perfect square, this is an int
+;          value to represent both axis'.
+; seed - the seed that will be used to determine the next random value 
+;        for placement.
+(defun generate-new-coord (bounds seed)
+  (let* ((seed1 (next-seed seed))
+         (col (rand bounds seed1))
+         (seed2 (next-seed seed1))
+         (row (rand bounds seed2)))
+    (list col row)))
+
+; (fit-left coords length bounds)
+; Attempts to make this word fit with a left orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-left (coords length bounds)
+  (let* ((col (car coords))
+         (row (cadr coords)))
+    (if (is-in-matrix col row bounds)
+        ; end-point is equivalent to the overflow in this case
+        (let* ((end-point (- col (- length 1))))
+          (if (< end-point 0)
+              (let* ((new-col (+ (abs end-point) col)))
+                (list new-col row))
+              (list col row)))
+        ; Use the col as a seed value
+        (fit-left (generate-new-coord bounds (abs col)) length bounds))))
+
+; (fit-right coords length bounds)
+; Attempts to make this word fit with a right orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-right (coords length bounds)
+  (let* ((col (car coords))
+         (row (cadr coords)))
+    (if (is-in-matrix col row bounds)
+        (let* ((end-point (+ col (- length 1))))
+          (if (> end-point (- bounds 1))
+              (let* ((overflow (- (abs end-point) (- length 1)))
+                     (new-col (- col (- overflow 1))))
+                (list new-col row))
+              (list col row)))
+        ; Use the col as a seed value
+        (fit-right (generate-new-coord bounds (abs col)) length bounds))))
+
+; (fit-up coords length bounds)
+; Attempts to make this word fit with a up orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-up (coords length bounds)
+  (let* ((col (car coords))
+         (row (cadr coords)))
+    (if (is-in-matrix col row bounds)
+        ; end-point is equivalent to the overflow in this case
+        (let* ((end-point (- row (- length 1))))
+          (if (< end-point 0)
+              (let* ((new-row (+ (abs end-point) row)))
+                (list col new-row))
+              (list col row)))
+        ; Use the row as a seed value
+        (fit-left (generate-new-coord bounds (abs row)) length bounds))))
+
+; (fit-down coords length bounds)
+; Attempts to make this word fit with a right orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-down (coords length bounds)
+  (let* ((col (car coords))
+         (row (cadr coords)))
+    (if (is-in-matrix col row bounds)
+        (let* ((end-point (+ row (- length 1))))
+          (if (> end-point (- bounds 1))
+              (let* ((overflow (- (abs end-point) (- length 1)))
+                     (new-row (- row (- overflow 1))))
+                (list col new-row))
+              (list col row)))
+        ; Use the row as a seed value
+        (fit-right (generate-new-coord bounds (abs row)) length bounds))))
+
+; (fit-left-down coords length bounds)
+; Attempts to make this word fit with a left down diagonal orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-left-down (coords length bounds)
+  (fit-down (fit-left coords length bounds) length bounds))
+
+; (fit-right-down coords length bounds)
+; Attempts to make this word fit with a right down diagonal orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-right-down (coords length bounds)
+  (fit-down (fit-right coords length bounds) length bounds))
+
+; (fit-right-up coords length bounds)
+; Attempts to make this word fit with a right up diagonal orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-right-up (coords length bounds)
+  (fit-up (fit-right coords length bounds) length bounds))
+
+; (fit-left-up coords length bounds)
+; Attempts to make this word fit with a left up diagonal orientation.
+; coords - the tuple (col row) of the placement of a word.
+; length - the length of the word that is to be placed.
+; bounds - the bound value for the board.  ** Board is a square so bound
+;          is a single int that represents the x and y bounds.
+(defun fit-left-up (coords length bounds)
+  (fit-up (fit-left coords length bounds) length bounds))
+
+; (collision graph start-point end-point)
+; Detects if there is a collision on the graph with the current word being
+; placed into the matrix.
+; ** If the collision is of like characters, the collision is ignored since
+;    this would allow for word intersection.
+; graph - the matrix that contains all the characters currently placed on 
+;         the matrix.
+; start-point - the starting point of a word being checked against the matrix.
+; end-point - the ending point of a word being checked against the matrix.
+; word - the word that is being placed into the matrix.
+(defun collision (graph start-point end-point word)
+  (let* ((x1 (car start-point))
+         (x2 (car end-point))
+         (y1 (cadr start-point))
+         (y2 (cadr end-point))
+         (row (nth y1 graph))
+         (col (nth x1 row)))
+    (if (or (equal col #\.) (equal col (car word)))
+        (cond ((= x1 x2)
+               (cond ((= y1 y2) nil)
+                     ; Right position collision detection
+                     ((< y1 y2) (collision graph (list x1 (+ y1 1)) end-point (cdr word)))
+                     ; Left position collision detection
+                     ((> y1 y2) (collision graph (list x1 (- y1 1)) end-point (cdr word)))))
+              ((< x1 x2)
+                     ; Down position collision detection
+               (cond ((= y1 y2) (collision graph (list (+ x1 1) y1) end-point (cdr word)))
+                     ; Down-Right position collision detection
+                     ((< y1 y2) (collision graph (list (+ x1 1) (+ y1 1)) end-point (cdr word)))
+                     ; Down-Left position collision detection
+                     ((> y1 y2) (collision graph (list (+ x1 1) (- y1 1)) end-point (cdr word)))))
+              ((> x1 x2)
+                     ; Up position collision detection
+               (cond ((= y1 y2) (collision graph (list (- x1 1) y1) end-point (cdr word)))
+                     ; Up-Right collision detection
+                     ((< y1 y2) (collision graph (list (- x1 1) (+ y1 1)) end-point (cdr word)))
+                     ; Up-Left collision detection
+                     ((> y1 y2) (collision graph (list (- x1 1) (- y1 1)) end-point (cdr word))))))
+        t)))
+
+; (fit-to-board word matrix orientation seed attempts)
+; This function will determine the correct course of action for adding 
+; a word to the board.  It will attempt to find a suitable start location
+; and if it cannot find a suitable location after 10 tries, it will 
+; expand the playing board to accomidate more play tiles for adding
+; the word.
+; word - the word that will be added to the matrix.
+; matrix - the current playing board that will have the word added.
+; orientation - the placement orientation of the word.
+; seed - the next seed to generate a random number.
+; attempts - the incrementer to check attempts of adding word to board.
+(defun fit-to-board (word matrix orientation seed attempts)
+  (if (> attempts 10)
+      nil
+      (let* ((bounds (length matrix))
+             (length (length word)))
+        (cond ((equal orientation "right") 
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-right coord length bounds))
+                      (end-coord (list (+ (car start-coord) (- length 1)) (cadr start-coord))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "left")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-left coord length bounds))
+                      (end-coord (list (- (car start-coord) (- length 1)) (cadr start-coord))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "up")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-up coord length bounds))
+                      (end-coord (list (car start-coord) (- (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "down")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-down coord length bounds))
+                      (end-coord (list (car start-coord) (+ (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "right-down")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-right-down coord length bounds))
+                      (end-coord (list (+ (car start-coord) (- length 1)) (+ (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "right-up")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-right-up coord length bounds))
+                      (end-coord (list (+ (car start-coord) (- length 1)) (- (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "left-down")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-left-down coord length bounds))
+                      (end-coord (list (- (car start-coord) (- length 1)) (+ (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))
+              ((equal orientation "left-up")
+               (let* ((seed1 (next-seed seed))
+                      (row (rand bounds seed1))
+                      (seed2 (next-seed seed1))
+                      (col (rand bounds seed2))
+                      (coord (list col row))
+                      (start-coord (fit-left-up coord length bounds))
+                      (end-coord (list (- (car start-coord) (- length 1)) (- (cadr start-coord) (- length 1)))))
+                 (if (collision matrix start-coord end-coord word)
+                     (fit-to-board word matrix orientation seed2 (+ attempts 1))
+                     start-coord)))))))
+
+; (append-columns board)
+; This will append an extra column to the end of each row.
+; board the current playing surface to be expanded.
+(defun append-columns (board)
+  (if (endp board)
+      '()
+      (append (list (append (car board) '(#\.))) (append-columns (cdr board)))))
+
+; (append-row board)
+; This will append a row to the board.
+; board - the current playing surface to be expanded.
+(defun append-row (board)
+  (append board (list (make-list (length (car board)) :initial-element #\.))))
+
+; (expand-board board)
+; This function will add an additional column and row to the playing matrix
+; causing the playing surface to expand to accept more words to add to the
+; crossword puzzle.
+; board - the current playing surface to be expanded.
+(defun expand-board (board)
+  (append-columns (append-row board)))
 
 ; (plc-wdsrch words brd seed)
 ; Entry point for the placement module. 
@@ -378,73 +570,26 @@
 (defun plc-wdsrch (words brd seed)
   (if (endp words)
       brd
-      (let* ((word (str->chrs (car words)))
+      (let* ((word (coerce (car words) 'list))
              (letter-board (car brd))
              (solutions    (cdr brd))
-             (type (rand 8 seed))
-             (new-seed (next-seed seed))
-             (x-coord (rand 12 new-seed))
-             (another-seed (next-seed seed))
-             (y-coord (rand 12 another-seed))
-             (start-coord (list x-coord y-coord))
-             (new-board (place letter-board word type start-coord))
-             (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
-             (new-solutions (append solutions (list new-word-solution)))
-             (new-brd (cons new-board new-solutions))
-             )
-        (plc-wdsrch (cdr words) new-brd (next-seed another-seed)))))
-
-;(plc-wdsrch (list "hello" "test" "world") 
-;            (list (list (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)
-; (list #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\. #\.)) '()) 78)
-
-; Old unused code
-#|
-(defun plc-wdsrch (words brd seed)
-  (if (endp words) 
-      '()
-      (let* ((word (str->chrs (car words))) ;cnvrt str chrs
-             ;(type (rand 4 seed)) ;get the type we are placing
-             (type (rand 8 seed))
-             (coords (fit-coords type word brd (+ seed 57)))
-             (new-brd (place (car brd) word type coords)));our new updated board
-       
-        (if (or (= type 1) (= type 3) (= type 6) (= type 7))
-            (cons (cons (cons (car words) (reverse coords)) new-brd) (plc-wdsrch (cdr words) new-brd (+ 99 seed)))
-            (cons (cons (cons (car words) coords) new-brd) (plc-wdsrch (cdr words) new-brd (+ 39 seed)))))))
-|#
-;-------------------------------------------------------End Placement
-
-;-------------------------------------------------------Unused
-
-;; Changing values of a row puts the
-;; correct spot utilizing coordinates
-;(defun row-rep (chrs y1 y2 cnt row)
-;  (if  (=  cnt (len row)) 
-;       (if (null chrs) '()
-;           (list (car chrs)));we reached end of row
-;  (if  (and (not (endp chrs)) (and (>= cnt y1) (< cnt y2)))
-;      (cons (car chrs) ; where we put characters into board
-;            (row-rep (cdr chrs) y1 y2 (+ 1 cnt) row)) 
-;    (cons (nth cnt  row) ; kee going until we are in range
-;         (row-rep chrs y1 y2 (+ 1 cnt) row)
-;  
-;))))
-
-;(defun replace-col (brd col col-num)
-;  (if (endp col) brd
-;      (cons (row-rep col col-num (+ 1 col-num) 0 (car brd))
-;            (replace-col (cdr brd) (cdr col) col-num))))
-
-;End placement.lisp
+             (seed1 (next-seed seed))
+             (type (rand 8 seed1))
+             (seed2 (next-seed seed1))
+             (orientation (cond ((= type 0) "right")
+                                ((= type 1) "left")
+                                ((= type 2) "down")
+                                ((= type 3) "up")
+                                ((= type 4) "right-down")
+                                ((= type 5) "left-down")
+                                ((= type 6) "right-up")
+                                ((= type 7) "left-up")))
+             (start-coord (fit-to-board word letter-board seed2 orientation 0)))
+        (if start-coord
+            (let* ((new-board (place letter-board word type start-coord))
+                   (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
+                   (new-solutions (append solutions (list new-word-solution)))
+                   (new-brd (cons new-board new-solutions)))
+              (plc-wdsrch (cdr words) new-brd (next-seed seed2)))
+            ; We don't have any place to put this word!  Expand the matrix.
+            nil))))
