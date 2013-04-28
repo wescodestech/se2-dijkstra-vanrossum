@@ -584,7 +584,7 @@
                                 ((= type 5) "left-down")
                                 ((= type 6) "right-up")
                                 ((= type 7) "left-up")))
-             (start-coord (fit-to-board word letter-board seed2 orientation 0)))
+             (start-coord (fit-to-board word letter-board orientation seed2 0)))
         (if start-coord
             (let* ((new-board (place letter-board word type start-coord))
                    (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
@@ -592,4 +592,4 @@
                    (new-brd (cons new-board new-solutions)))
               (plc-wdsrch (cdr words) new-brd (next-seed seed2)))
             ; We don't have any place to put this word!  Expand the matrix.
-            nil))))
+            (plc-wdsrch (words) (expand-board brd) (next-seed seed2))))))
