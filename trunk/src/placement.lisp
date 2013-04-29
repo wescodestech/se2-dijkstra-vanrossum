@@ -588,7 +588,9 @@
         (if start-coord
             (let* ((new-board (place letter-board word type start-coord))
                    (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
-                   (new-solutions (append solutions (list new-word-solution)))
+                   (new-solutions (if (caar solutions)
+                                      (append solutions (list new-word-solution))
+                                      (list new-word-solution)))
                    (new-brd (cons new-board new-solutions)))
               (plc-wdsrch (cdr words) new-brd (next-seed seed2)))
             ; We don't have any place to put this word!  Expand the matrix.

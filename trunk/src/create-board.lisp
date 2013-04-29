@@ -6,10 +6,9 @@
 
 (in-package "ACL2")
 
+(include-book "list-utilities" :dir :teachpacks)
 (include-book "placement")
 (include-book "fill-board")
-
-
 
 ; Helper function to get largest element returns larger
 ; of two words
