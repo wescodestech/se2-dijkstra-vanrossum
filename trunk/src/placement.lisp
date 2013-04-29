@@ -559,6 +559,11 @@
 (defun expand-board (board)
   (append-columns (append-row board)))
 
+(defun add-solution (solutions solution)
+  (if solutions
+      (append solutions (list solution))
+      (list solution)))
+
 ; (plc-wdsrch words brd seed)
 ; Entry point for the placement module. 
 ; words - a list of words as strings '("word1" "word2" ... "wordn")
@@ -572,7 +577,7 @@
       brd
       (let* ((word (coerce (car words) 'list))
              (letter-board (car brd))
-             (solutions    (cdr brd))
+             (solutions    (cadr brd))
              (seed1 (next-seed seed))
              (type (rand 8 seed1))
              (seed2 (next-seed seed1))
@@ -588,10 +593,8 @@
         (if start-coord
             (let* ((new-board (place letter-board word type start-coord))
                    (new-word-solution (list (car words) start-coord (get-end-coords start-coord (length word) type)))
-                   (new-solutions (if (caar solutions)
-                                      (append solutions (list new-word-solution))
-                                      (list new-word-solution)))
-                   (new-brd (cons new-board new-solutions)))
+                   (new-solutions (add-solution solutions new-word-solution))
+                   (new-brd (list new-board new-solutions)))
               (plc-wdsrch (cdr words) new-brd (next-seed seed2)))
             ; We don't have any place to put this word!  Expand the matrix.
             (plc-wdsrch (words) (expand-board brd) (next-seed seed2))))))
