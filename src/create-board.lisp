@@ -70,6 +70,7 @@
 
 ;Generate Board for word-search
 (defun wdsrch-brd (words)
+  #|
   (let* ((n (gen-diff words))
          (brd (mtx n n))
         (seeds 23)
@@ -81,6 +82,13 @@
        (filld-srch (fill-brd wdsrch seeds)))
    
     (list filld-srch wds-coords)))
+  |#
+  (let* ((seed1 23)
+         (board-struct (plc-wdsrch words '((#\. #\. #\. #\.) (#\. #\. #\. #\.) (#\. #\. #\. #\.) (#\. #\. #\. #\.)) seed))
+         (board (car board-struct))
+         (solutions (cadr board-struct))
+         (masked (fill-brd board seed1)))
+    (list masked solutions)))
 
 
 ;Generate Board for xword
