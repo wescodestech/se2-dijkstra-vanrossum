@@ -7,6 +7,7 @@
 
 (in-package "ACL2")
 
+(include-book "list-utilities" :dir :teachpacks)
 (include-book "rand" :dir :teachpacks)
 
 ; (verify-placement word brd col-num row-num direction)
@@ -557,8 +558,14 @@
 ; crossword puzzle.
 ; board - the current playing surface to be expanded.
 (defun expand-board (board)
-  (append-columns (append-row board)))
+  (let* ((solutions (cadr board))
+         (new-board (append-columns (append-row (car board)))))
+    (list new-board solutions)))
 
+; (add-solution solutions solution)
+; Adds a solution to the current list of solutions.
+; solutions - the list of solutions currently on the board.
+; solution - the solution that will be added to the board.
 (defun add-solution (solutions solution)
   (if solutions
       (append solutions (list solution))
@@ -575,7 +582,7 @@
 (defun plc-wdsrch (words brd seed)
   (if (endp words)
       brd
-      (let* ((word (coerce (car words) 'list))
+      (let* ((word (str->chrs (car words)))
              (letter-board (car brd))
              (solutions    (cadr brd))
              (seed1 (next-seed seed))
@@ -597,4 +604,4 @@
                    (new-brd (list new-board new-solutions)))
               (plc-wdsrch (cdr words) new-brd (next-seed seed2)))
             ; We don't have any place to put this word!  Expand the matrix.
-            (plc-wdsrch (words) (expand-board brd) (next-seed seed2))))))
+            (plc-wdsrch words (expand-board brd) (next-seed seed2))))))
