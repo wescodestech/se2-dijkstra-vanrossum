@@ -1,73 +1,58 @@
 (in-package "ACL2")
 
-(include-book "list-utilities" :dir :teachpacks)
+(defun along-axis (check-x check-y next-x next-y direction duration)
+  (if (and (= check-x next-x) (= check-y next-y))
+      t
+      (if (> duration 0)
+          (cond ((equal direction "left")
+                 (along-axis check-x check-y (- next-x 1) next-y direction (- duration 1)))
+                ((equal direction "right")
+                 (along-axis check-x check-y (+ next-x 1) next-y direction (- duration 1)))
+                ((equal direction "up")
+                 (along-axis check-x check-y next-x (- next-y 1) direction (- duration 1)))
+                ((equal direction "down")
+                 (along-axis check-x check-y next-x (+ next-y 1) direction (- duration 1)))
+                ((equal direction "left-up")
+                 (along-axis check-x check-y (- next-x 1) (- next-y 1) direction (- duration 1)))
+                ((equal direction "left-down")
+                 (along-axis check-x check-y (- next-x 1) (+ next-y 1) direction (- duration 1)))
+                ((equal direction "right-up")
+                 (along-axis check-x check-y (+ next-x 1) (- next-y 1) direction (- duration 1)))
+                ((equal direction "right-down")
+                 (along-axis check-x check-y (+ next-x 1) (+ next-y 1) direction (- duration 1))))
+          nil))) ; Not located in this solution term
 
-; returns a single nth item out of a list
-; n is a number, zero indexed
-; list is a list
-(defun get_n (n list)
-  (if (< n (length list))
-  (first (last (first (break-at-nth (+ n 1) list))))
-  nil))
-
-(defun make_nil_char (char)
-  (if (characterp char)
-      char
-      #\~))
-
-; x and y are the start position of letter, zero indexed
-; letter is the char we are checking, 
-; sol_x and sol_y is the start position of the word
-; chrs_list is the word split into a list of chars
-(defun check-one-solution-horizontal (x y letter sol_x sol_y chrs_list)
-  (if (equal y sol_y)
-      (if (char-equal (make_nil_char (get_n (- x sol_x) chrs_list)) letter)
-          letter
-          nil)
-      nil))
-
-; same as above
-(defun check-one-solution-vertical (x y letter sol_x sol_y chrs_list)
-  (if (equal x sol_x)
-      (if (char-equal (make_nil_char (get_n (- y sol_y) chrs_list)) letter)
-          letter
-          nil)
-      nil))
-
-; x and y are the start position of letter, zero indexed
-; letter is the char we are checking
-; solution is in the form ("word" (sol_x sol_y) (sol_x_end sol_y_end))
-; and all sol_# values are numbers
-(defun check-one-solution (x y letter solution)
-  (let* ((sol_x (first (second solution)))
-         (sol_y (second (second solution)))
-         (sol_x_end (first (third solution)))
-         (sol_y_end (second (third solution)))
-         (chrs_list (str->chrs (first solution)))
-         (rev_chrs_list (reverse chrs_list)))
-    (if (equal sol_x sol_x_end)
-        (if (< sol_y sol_y_end)
-            (check-one-solution-vertical x y letter sol_x sol_y chrs_list); vertical
-            (check-one-solution-vertical x y letter sol_x_end sol_y_end rev_chrs_list)); vertical
-        (if (< sol_x sol_x_end)    
-            (check-one-solution-horizontal x y letter sol_x sol_y chrs_list) ; horizontal
-            (check-one-solution-horizontal x y letter sol_x_end sol_y_end rev_chrs_list)) ; horizontal
-        )))
-
-; x and y are the start position of the letter, zero indexed
-; letter is a char here
-; solutions is a list of solution
-; will return the char if it is correct, nil if it is incorrect
-(defun check-solution (x y letter solutions)
-  (if (consp solutions)
-      (let* ((output (check-one-solution x y letter (car solutions))))
-        (if (characterp output)
-            output
-            (check-solution x y letter (cdr solutions))))
-      nil
-  ))
-      
 ; letter is the string we are checking (make it length of 1)
 ; this is the method to call
+; The letter is insignificant - Matt
 (defun check-solution-entry (x y letter solutions)
-  (check-solution x y (first (str->chrs letter)) solutions))
+  (if (endp solutions)
+      nil ; It is not a part of any solution
+      (let* ((next-try (car solutions))
+             (word (coerce (car next-try) 'list))
+             (start (cadr next-try))
+             (start-x (car start))
+             (start-y (cadr start))
+             (end (caddr next-try))
+             (end-x (car end))
+             (end-y (cadr end))
+             (placement-type
+              ;; left-down, left-up or left
+              (cond ((> start-x end-x)
+                     (cond ((> start-y end-y) "left-up")
+                           ((< start-y end-y) "left-down")
+                           ((= start-y end-y) "left")))
+                    ;; right-down, right-up or right
+                    ((< start-x end-x)
+                     (cond ((> start-y end-y) "right-up")
+                           ((< start-y end-y) "right-down")
+                           ((= start-y end-y) "right")))
+                    ;; up, down or singlet
+                    ((= start-x end-x)
+                     (cond ((> start-y end-y) "up")
+                           ((< start-y end-y) "down")
+                           ((= start-y end-y) "singlet")))))
+             (found (along-axis x y start-x start-y placement-type (- (length word) 1))))
+        (if found
+            t
+            (check-solution-entry x y letter (cdr solutions))))))

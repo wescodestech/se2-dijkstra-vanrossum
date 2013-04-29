@@ -43,8 +43,8 @@ switch ($action)
 				$solution = trim($solution);
 				
 				// then make our setup file
-				$SETUP = do_replacement(ACL2_SRC_DIR . SETUP_TEMPLATE, array('X' => $x,
-																			 'Y' => $y,
+				$SETUP = do_replacement(ACL2_SRC_DIR . SETUP_TEMPLATE, array('X' => $y,
+																			 'Y' => $x,
 																			 'LETTER' => $letter,
 																			 'SOLUTIONS' => $solution));
 																			 
@@ -54,7 +54,7 @@ switch ($action)
 				//echo $final_call;
 				
 				$returned_string = $console_log[count($console_log) - 2];
-				if($returned_string == 'ACL2 p>#\\' . $letter)
+				if($returned_string == 'ACL2 p>T')
 				{
 					$json['success'] = true;
 					$json['correct'] = true;
