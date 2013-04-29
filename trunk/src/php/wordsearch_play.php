@@ -46,20 +46,20 @@ switch ($action)
 				$SETUP = do_replacement(ACL2_SRC_DIR . SETUP_TEMPLATE, array('X' => $x,
 																			 'Y' => $y,
 																			 'LETTER' => $letter,
-																			 'SOLUTIONS' => $solution));
-																			 
+																			 'SOLUTIONS' => $solution));																			 
+				
 				$final_call = ACL2_EXE_DIR . ' < ' . $SETUP;
 				exec($final_call, $console_log);
 				
 				//echo $final_call;
 				
 				$returned_string = $console_log[count($console_log) - 2];
-				if($returned_string == 'ACL2 p>#\\' . $letter)
+				if($returned_string == 'ACL2 p>#\\t')
 				{
 					$json['success'] = true;
 					$json['correct'] = true;
 				}
-				else if($returned_string == 'ACL2 p>NIL')
+				else if($returned_string == 'ACL2 p>nil')
 				{
 					$json['success'] = true;
 					$json['correct'] = false;	
