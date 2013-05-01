@@ -1,0 +1,167 @@
+name: Matthew A. Crist
+date: May 2, 2013
+program: ACL2 WordGames
+instructor: Dr. Rex Page
+language: ACL2, PHP
+
+actual added lines: 352
+actual base lines: 2823
+actual modified lines: 38
+actual removed lines: 463
+
+time log:
+	- date: April 23, 2013
+	  start time: 6:00pm
+ 	  end time: 8:00pm
+	  phase: Conception
+	  comment: Attempted to make sense of the ACL2 code and determine and entry point for working on our augmented solution.  Commenting in the code at this point appears  very minimal and it is hard to determine what exactly is going on.  We have the data structure that is coming to be placed into the board but the internal mechanics seems to be exteremly lacking.  I've heard of "black box" but this is a little too vague on IO.
+
+	- date: April 24, 2013
+	  start time: 1:00am
+	  end time: 4:00am
+	  phase: Testing
+	  comment: Attempted to run multiple values through the functions to determine their output.  Came to the conclusion that the system is way too dependent upon a coordinate system which will not suffice for word intersection.  Since the placement.lisp file is completely dependent upon this system and the data is stored in the fits.lisp file, I have determined that I must rewrite the underlying system to accomidate these changes.  I will also simply and use matrix operations in order to determine solutions so the check_board.lisp file will need to be rewritten at this time.  I am unsure of the data structure that must be returned by plc-wrdsrc at this point however.
+
+	- date: April 26, 2013
+ 	  start time: 1:00am
+	  end time: 2:00am
+	  phase: Coding
+	  comment: Created the matrix operation functions that will determine collision, expansion and dtermine if the word should fit in the word matrix.  This also required me to acquire specific characters placements to determine the character at the location and whether and intersection was able to be derived.  Current process is to "scoot" the word according to the placement - example left placement scoots the word back to the right until it is in the boundary of the board.  If the word is detected in collision with another word, then we must randomly place that word elsewhere.
+
+	- date: April 26, 2013
+	  start time: 2:00am
+	  end time: 4:00am
+	  phase: Testing
+	  comment: Ran tests on matrix operations and had to tweak a few things.  My boundary had issues in that I was calculating the incorrect boundary placement (as it would place it in the word search but not at the first, last row and column, which meant my math was a little off.  Sketched it out on paper again and verified the placement was correct.
+
+	- date: April 27, 2013
+	  start time: 1:00 am
+	  end time: 3:00 am
+	  phase: Coding
+ 	  comment: I had to add additional checks for word placement as the words were overwriting themselves (appeared to be in the collision detection).  Also formulated a process to randomizing number seed generation with the help of Welsey using the "next-seed" function that is in the teachpacks (which to my preference in contrary as I prefer not to be dependent on libraries that are not packaged with ACL2).  Randomization does not appear to be random as it can be reproduced using the same seed everytime so, I decided just to use the 1111 seed for giggles.
+
+	- date: April 28, 2013
+	  start time: 4:00pm
+	  end time: 6:00pm
+	  phase: Coding
+	  comment: Determined that the PHP required a bit of modification as the table was not be reproduced in correct format.  Determined that I needed to determine checking solution to be t as the character is not longer checked and the solutions to be board.  It also appears that JQuery's coordinate system is flipped from that of the one in which I was using, so I just flipped the x and y values in the PHP instead of writing a function in ACL2 that would flip the coordinates prior to adding them to the solution.  Since the matrix uses "lines" to determine the solution, some if this checking that is in the PHP is not technically necessary, but for sake of time constraints I have decided not to try and modify it.  The brute force solver only appears to do horizontal and vertical solutions, but I think the solution is much simple in that we could just use the current JQuery code to determine if the state is "red - failed" or "green - success" and solve the board in that manner instead of tranversing for a solution.
+
+new objects:
+	- name: verify-placement
+	  estimated lines: 18
+          type: Non IO
+
+	- name: get-rows-after
+	  estimated lines: 4
+          type: Non IO
+
+	- name: get-rows-before
+	  estimated lines: 4
+          type: Non IO
+
+	- name: get-row-at
+	  estimated lines: 4
+          type: Non IO
+
+	- name: get-cols-after
+	  estimated lines: 4
+          type: Non IO
+
+	- name: get-cols-before
+	  estimated lines: 4
+          type: Non IO
+
+	- name: replace-characters
+	  estimated lines: 18
+          type: Non IO
+
+	- name: place
+	  estimated lines: 18
+          type: Non IO
+
+	- name: get-end-coords
+	  estimated lines: 18
+          type: Non IO
+
+	- name: is-in-matrix
+	  estimated lines: 18
+          type: Non IO
+
+	- name: fit-left
+	  estimated lines: 6
+          type: Non IO
+
+	- name: fit-right
+	  estimated lines: 6
+          type: Non IO
+
+	- name: fit-up
+	  estimated lines: 6
+          type: Non IO
+
+	- name: fit-down
+	  estimated lines: 6
+          type: Non IO
+
+	- name: fit-right-down
+	  estimated lines: 3
+          type: Non IO
+
+	- name: fit-right-up
+	  estimated lines: 3
+          type: Non IO
+
+	- name: fit-left-down
+	  estimated lines: 3
+          type: Non IO
+
+	- name: fit-left-up
+	  estimated lines: 3
+          type: Non IO
+
+	- name: collision
+	  estimated lines: 3
+          type: Non IO
+
+	- name: fit-to-board
+	  estimated lines: 3
+          type: Non IO
+
+	- name: append-columns
+	  estimated lines: 6
+          type: Non IO
+
+	- name: append-row
+	  estimated lines: 6
+          type: Non IO
+
+	- name: expand-board
+	  estimated lines: 6
+          type: Non IO
+	
+	- name: add-solution
+	  estimated lines: 3
+          type: Non IO
+
+	- name: plc-wdsrch
+	  estimated lines: 18
+          type: Non IO
+
+	- name: along-axis
+	  estimated lines: 9
+          type: Non IO
+
+	- name: check-solution-entry
+	  estimated lines: 18
+          type: Non IO
+
+defect log:
+	- date: April 26, 2013
+	  type: Coding
+	  fix time: 20
+	  comment: Boundary issues with the placement of the word would expand the matrix too much.  Determined the last rows and columns were not having any solutions placed into them even when discretely acsked to do so, and found that my math was bad.  Redid the logic and it works as intended.
+
+	- date: April 26, 2013
+	  type: Coding
+	  fix time: 16
+	  comment: Collision detection was not working properly.  This was due to an incorrect calculation on the position of the word and the placement on the letter matrix.  Solution was simple in that I was looking ahead too far on the matrix in relation to the placement of the word, since I did not take into account that the first letter was exactly at the start coordinate and not at the next one (4 to 6 is actually 3 letters instead of 2).
